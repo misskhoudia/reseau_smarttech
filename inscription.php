@@ -1,6 +1,7 @@
 <?php
 session_start();
 
+
 // Connexion à la base de données
 include_once __DIR__ . '/includes/db.php';
 
@@ -26,6 +27,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 }
+?>
+<?php
+include_once __DIR__ . '/includes/mail.php';
+
+$to = "utilisateur@example.com"; // Adresse e-mail du destinataire
+$subject = "Bienvenue sur Projet Smarttech";
+$body = "Bonjour,<br>Merci de vous être inscrit sur notre plateforme.";
+
+$result = sendEmail($to, $subject, $body);
+echo $result;
 ?>
 
 <!DOCTYPE html>

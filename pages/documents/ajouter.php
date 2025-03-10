@@ -1,20 +1,56 @@
 <?php
-include '../../includes/db.php';
+session_start();
 
-if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $nom_fichier = $_POST['nom_fichier'];
-    $chemin_fichier = $_FILES['fichier']['name'];
-    $dossier_upload = "/var/ftp/smarttech/";
-
-    // Déplacer le fichier uploadé
-    move_uploaded_file($_FILES['fichier']['tmp_name'], $dossier_upload . $chemin_fichier);
-
-    $sql = "INSERT INTO documents (nom_fichier, chemin_fichier) VALUES (:nom_fichier, :chemin_fichier)";
-    $stmt = $conn->prepare($sql);
-    $stmt->execute(['nom_fichier' => $nom_fichier, 'chemin_fichier' => $chemin_fichier]);
-
-    header('Location: index.php');
+// Vérifier si l'utilisateur est connecté
+if (!isset($_SESSION['id'])) {
+    header("Location: ../../connexion.php");
+    exit;
 }
+
+// Vérifier si l'utilisateur est un admin
+if ($_SESSION['role'] !== 'admin') {
+    echo "Accès refusé. Vous n'avez pas les permissions nécessaires.";
+    exit;
+}
+
+// Paramètres FTP
+$ftp_server = "192.168.1.41";
+$ftp_user = "ftpuser";
+$ftp_password = "passer123";
+$ftp_upload_dir = "/var/ftp/smartteh"; // Répertoire distant où stocker les fichiers
+
+$message = "";
+
+// Connexion FTP
+$ftp_conn = ftp_connect($ftp_server);
+if ($ftp_conn && ftp_login($ftp_conn, $ftp_user, $ftp_password)) {
+    ftp_pasv($ftp_conn, true); // Mode passif si nécessaire
+
+    // Récupération de la liste des fichiers du répertoire
+    $files = ftp_nlist($ftp_conn, $ftp_upload_dir);
+
+    if ($files === false) {
+        $message = "Impossible de récupérer la liste des fichiers.";
+        $files = [];
+    }
+} else {
+    die("Erreur : Connexion au serveur FTP échouée.");
+}
+
+// Suppression d'un fichier si demandé
+if (isset($_GET['delete'])) {
+    $fileToDelete = $ftp_upload_dir . basename($_GET['delete']);
+    if (ftp_delete($ftp_conn, $fileToDelete)) {
+        $message = "Fichier supprimé avec succès.";
+    } else {
+        $message = "Erreur lors de la suppression du fichier.";
+    }
+    header("Location: index.php");
+    exit;
+}
+
+// Fermeture de la connexion FTP
+ftp_close($ftp_conn);
 ?>
 
 <!DOCTYPE html>
